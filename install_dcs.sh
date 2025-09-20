@@ -52,9 +52,9 @@ while true; do
     -H "xc-token: \$NC_API_KEY" \\
     -H "Content-Type: application/json" \\
     -d "{
-      \\\"hostname\\\":\\\"\$DEVICE_HOSTNAME\\\",
-      \\\"last_seen\\\":\\\"\$TS\\\",
-      \\\"ip\\\":\\\"\$PUBIP\\\"
+      \\\"hostname\\\": \\\"\$DEVICE_HOSTNAME\\\",
+      \\\"last_seen\\\": \\\"\$TS\\\",
+      \\\"ip\\\": \\\"\$PUBIP\\\"
     }" >/tmp/dcs_last_response.log 2>&1
 
   sleep "\$INTERVAL_SEC"
