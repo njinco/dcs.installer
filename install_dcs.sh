@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-set -euo pipefail
+set -eo pipefail   # remove -u to avoid "unbound variable" issues
 
 echo "=== 📡 DCS - Device Check-in System Installer ==="
 
@@ -17,19 +17,19 @@ SERVICE_FILE="/etc/systemd/system/heartbeat-checkin.service"
 sudo mkdir -p "$INSTALL_DIR"
 
 # Write client script with embedded values
-sudo tee "$INSTALL_DIR/client_checkin.sh" >/dev/null <<EOF
+sudo tee "$INSTALL_DIR/client_checkin.sh" >/dev/null <<'EOF'
 #!/usr/bin/env bash
 
-NC_URL="$NC_URL"
-NC_API_KEY="$NC_API_KEY"
-DEVICE_HOSTNAME="\${DEVICE_ID_OVERRIDE:-\$(hostname)}"
+NC_URL="__NC_URL__"
+NC_API_KEY="__NC_API_KEY__"
+DEVICE_HOSTNAME="${DEVICE_ID_OVERRIDE:-$(hostname)}"
 INTERVAL_SEC=300
 
 get_public_ip() {
   for svc in "https://ifconfig.me" "https://api.ipify.org" "https://ipinfo.io/ip"; do
-    ip="\$(curl -s --max-time 5 "\$svc")"
-    if [[ "\$ip" =~ ^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$ || "\$ip" =~ : ]]; then
-      echo "\$ip"
+    ip="$(curl -s --max-time 5 "$svc")"
+    if [[ "$ip" =~ ^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$ || "$ip" =~ : ]]; then
+      echo "$ip"
       return
     fi
   done
@@ -37,18 +37,22 @@ get_public_ip() {
 }
 
 while true; do
-  TS="\$(TZ='Asia/Manila' date +"%d-%m-%Y %H:%M")"
-  PUBIP="\$(get_public_ip)"
+  TS="$(TZ='Asia/Manila' date +"%d-%m-%Y %H:%M")"
+  PUBIP="$(get_public_ip)"
 
-  echo "[\$(date)] sending check-in: \$DEVICE_HOSTNAME at \$TS (\$PUBIP)"
-  curl -s -X POST "\$NC_URL" \\
-    -H "xc-token: \$NC_API_KEY" \\
-    -H "Content-Type: application/json" \\
-    -d "{\\"hostname\\":\\"\\$DEVICE_HOSTNAME\\",\\"last_seen\\":\\"\\$TS\\",\\"ip\\":\\"\\$PUBIP\\"}" >/dev/null || true
+  echo "[$(date)] sending check-in: $DEVICE_HOSTNAME at $TS ($PUBIP)"
+  curl -s -X POST "$NC_URL" \
+    -H "xc-token: $NC_API_KEY" \
+    -H "Content-Type: application/json" \
+    -d "{\"hostname\":\"$DEVICE_HOSTNAME\",\"last_seen\":\"$TS\",\"ip\":\"$PUBIP\"}" >/dev/null || true
 
-  sleep "\$INTERVAL_SEC"
+  sleep "$INTERVAL_SEC"
 done
 EOF
+
+# Inject values into script
+sudo sed -i "s|__NC_URL__|$NC_URL|g" "$INSTALL_DIR/client_checkin.sh"
+sudo sed -i "s|__NC_API_KEY__|$NC_API_KEY|g" "$INSTALL_DIR/client_checkin.sh"
 
 sudo chmod +x "$INSTALL_DIR/client_checkin.sh"
 
