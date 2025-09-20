@@ -27,14 +27,20 @@ DEVICE_HOSTNAME="\${DEVICE_ID_OVERRIDE:-\$(hostname)}"
 INTERVAL_SEC=300   # 5 minutes
 
 get_public_ip() {
-  for svc in "https://ifconfig.me" "https://api.ipify.org" "https://ipinfo.io/ip"; do
-    ip="\$(curl -s --max-time 5 "\$svc")"
-    if [[ "\$ip" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ || "\$ip" =~ : ]]; then
+  for svc in \\
+    "https://ifconfig.me" \\
+    "https://api.ipify.org" \\
+    "https://ipinfo.io/ip" \\
+    "https://checkip.amazonaws.com" \\
+    "https://icanhazip.com"; do
+    ip="\$(curl -4 -s --max-time 5 "\$svc" | tr -d '[:space:]')"
+    if [[ -n "\$ip" ]]; then
       echo "\$ip"
       return
     fi
   done
-  echo "unknown"
+  # Fallback: local outward-facing IP
+  ip route get 1.1.1.1 2>/dev/null | awk '{print \$7; exit}' || echo "unknown"
 }
 
 while true; do
