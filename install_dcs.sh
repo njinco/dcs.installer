@@ -33,14 +33,14 @@ get_public_ip() {
     "https://ipinfo.io/ip" \\
     "https://checkip.amazonaws.com" \\
     "https://icanhazip.com"; do
-    ip="\$(curl -4 -s --max-time 5 "\$svc" | tr -d '[:space:]')"
+    ip="\$(/usr/bin/curl -4 -s --max-time 5 "\$svc" | tr -d '[:space:]')"
     if [[ -n "\$ip" ]]; then
       echo "\$ip"
       return
     fi
   done
   # Fallback: local outward-facing IP
-  ip route get 1.1.1.1 2>/dev/null | awk '{print \$7; exit}' || echo "unknown"
+  /usr/sbin/ip route get 1.1.1.1 2>/dev/null | awk '{print \$7; exit}' || echo "unknown"
 }
 
 while true; do
@@ -48,14 +48,14 @@ while true; do
   PUBIP="\$(get_public_ip)"
 
   echo "[\$(date)] sending check-in: \$DEVICE_HOSTNAME at \$TS (\$PUBIP)"
-  curl -s -X POST "\$NC_URL" \\
+  /usr/bin/curl -s -X POST "\$NC_URL" \\
     -H "xc-token: \$NC_API_KEY" \\
     -H "Content-Type: application/json" \\
     -d "{
       \\\"hostname\\\":\\\"\$DEVICE_HOSTNAME\\\",
       \\\"last_seen\\\":\\\"\$TS\\\",
       \\\"ip\\\":\\\"\$PUBIP\\\"
-    }" >/dev/null || true
+    }" || echo "❌ curl failed"
 
   sleep "\$INTERVAL_SEC"
 done
@@ -75,6 +75,10 @@ Type=simple
 ExecStart=/usr/bin/env bash $INSTALL_DIR/client_checkin.sh
 Restart=always
 RestartSec=10
+# Ensure curl is found
+Environment="PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+# Delay start until network stabilizes
+ExecStartPre=/bin/sleep 10
 
 [Install]
 WantedBy=multi-user.target
