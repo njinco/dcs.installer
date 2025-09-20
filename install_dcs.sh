@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
-set -e  # only stop on errors, no "unbound variable" issues
+set -e
 
 echo "=== 📡 DCS - Device Check-in System Installer ==="
 
-# Prompt for required values
+# Prompt user
 read -rp "Enter your NocoDB API URL: " NC_URL
 read -rp "Enter your NocoDB API Key: " NC_API_KEY
 
@@ -45,7 +45,11 @@ while true; do
   curl -s -X POST "\$NC_URL" \\
     -H "xc-token: \$NC_API_KEY" \\
     -H "Content-Type: application/json" \\
-    -d "{\\"hostname\\":\\"\\$DEVICE_HOSTNAME\\",\\"last_seen\\":\\"\\$TS\\",\\"ip\\":\\"\\$PUBIP\\"}" >/dev/null || true
+    -d '{
+      "hostname":"'"'\$DEVICE_HOSTNAME'"'",
+      "last_seen":"'"'\$TS'"'",
+      "ip":"'"'\$PUBIP'"'"
+    }' >/dev/null || true
 
   sleep "\$INTERVAL_SEC"
 done
