@@ -1,11 +1,16 @@
 #!/usr/bin/env bash
 set -e
 
-echo "=== DCS - Device Check-in System Installer ==="
+echo "=== 📡 DCS - Device Check-in System Installer ==="
 
-# Prompt user
-read -p "Enter your NocoDB API URL: " NC_URL
-read -p "Enter your NocoDB API Key: " NC_API_KEY
+# Prompt user interactively
+read -rp "Enter your NocoDB API URL: " NC_URL
+read -rp "Enter your NocoDB API Key: " NC_API_KEY
+
+if [[ -z "$NC_URL" || -z "$NC_API_KEY" ]]; then
+  echo "❌ URL or API key missing, aborting."
+  exit 1
+fi
 
 # Vars
 INSTALL_DIR="/opt/heartbeat"
@@ -36,13 +41,14 @@ get_public_ip() {
 }
 
 while true; do
-  TS="\$(date -u +"%d-%m-%Y %H:%M")"
+  # Manila timezone (GMT+8)
+  TS="\$(TZ='Asia/Manila' date +"%d-%m-%Y %H:%M")"
   PUBIP="\$(get_public_ip)"
 
   echo "[\$(date)] sending check-in: \$DEVICE_HOSTNAME at \$TS (\$PUBIP)"
-  curl -s -X POST "\$NC_URL" \
-    -H "xc-token: \$NC_API_KEY" \
-    -H "Content-Type: application/json" \
+  curl -s -X POST "\$NC_URL" \\
+    -H "xc-token: \$NC_API_KEY" \\
+    -H "Content-Type: application/json" \\
     -d "{\\"hostname\\":\\"\\$DEVICE_HOSTNAME\\",\\"last_seen\\":\\"\\$TS\\",\\"ip\\":\\"\\$PUBIP\\"}" >/dev/null || true
 
   sleep "\$INTERVAL_SEC"
@@ -76,4 +82,3 @@ sudo systemctl enable --now heartbeat-checkin.service
 echo "✅ DCS client installed and running!"
 echo "Check status with: systemctl status heartbeat-checkin.service"
 echo "Follow logs with: journalctl -u heartbeat-checkin.service -f"
-
