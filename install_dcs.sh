@@ -55,7 +55,7 @@ while true; do
       \\\"hostname\\\":\\\"\$DEVICE_HOSTNAME\\\",
       \\\"last_seen\\\":\\\"\$TS\\\",
       \\\"ip\\\":\\\"\$PUBIP\\\"
-    }" || echo "❌ curl failed"
+    }" >/tmp/dcs_last_response.log 2>&1
 
   sleep "\$INTERVAL_SEC"
 done
@@ -75,9 +75,7 @@ Type=simple
 ExecStart=/usr/bin/env bash $INSTALL_DIR/client_checkin.sh
 Restart=always
 RestartSec=10
-# Ensure curl is found
 Environment="PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
-# Delay start until network stabilizes
 ExecStartPre=/bin/sleep 10
 
 [Install]
@@ -90,3 +88,4 @@ sudo systemctl enable --now heartbeat-checkin.service
 
 echo "✅ DCS client installed and running!"
 echo "👉 Check logs with: journalctl -u heartbeat-checkin.service -f"
+echo "👉 Last response saved at: /tmp/dcs_last_response.log"
