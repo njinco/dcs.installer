@@ -1,62 +1,56 @@
-# 📡 DCS Client Installer
-Device Check-in System (DCS) client for Linux.  
-Each device runs a small heartbeat script that checks in to a central **NocoDB** table every 5 minutes.  
-This lets you track whether devices are UP or DOWN without running constant pings.
+# 📡 DCS – Device Check-in System (Installer)
+
+DCS is a lightweight heartbeat client that lets remote devices **check in** to a central NocoDB database every 5 minutes.  
+Instead of pinging devices, you simply check when they last reported.
 
 ---
 
-## 📦 Requirements
-- Linux system with `systemd` (Ubuntu, Debian, Debian-based, CentOS, etc.)
+## 🔹 Requirements
+- Linux system with `systemd`
 - `curl` installed
-- Access to a NocoDB instance with a table like:
+- NocoDB instance with a table like:
 
-| hostname | last_seen           | ip    |
-|----------|---------------------|-------|
-| text     | single line text    | text  |
+| Column     | Type             |
+|------------|------------------|
+| hostname   | Single Line Text |
+| last_seen  | Single Line Text (format: `DD-MM-YYYY HH:mm`) |
+| ip         | Single Line Text |
 
-> ⚠️ `last_seen` column must be **Single Line Text**.  
-> Format: `DD-MM-YYYY HH:mm` (example: `21-09-2025 14:45`).
+⚠️ `last_seen` **must be text**, not date/time, to avoid format errors.
 
 ---
 
-## 🚀 Install
+## 🔹 Install
 
-Run this command on the device:
+Run the installer:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/<your-username>/<your-repo>/main/install_dcs.sh | bash
+curl -fsSL https://raw.githubusercontent.com/username/<your-repo>/main/install_dcs.sh | bash
 ```
 
 You will be prompted for:
+
 - **NocoDB API URL**  
   Example:  
-  `https://api-website/api/v1/db/data/v1/DCS/device_checkins`
-- **NocoDB API Key**  
+  ```
+  https://<your-nocodb-domain>/api/v1/db/data/v1/<project>/<table>
+  ```
+
+- **NocoDB API Key**
 
 The installer will:
-- Copy client script → `/opt/heartbeat/client_checkin.sh`
+
+- Copy client → `/opt/heartbeat/client_checkin.sh`
 - Create systemd unit → `/etc/systemd/system/heartbeat-checkin.service`
-- Enable + start the service
+- Enable + start service
 
 ---
 
-## ⏱ Timezone
-- The script records time in **GMT+8 (Asia/Manila)**  
-- Stored format: `DD-MM-YYYY HH:mm`  
-- Example: `21-09-2025 14:45`
-
----
-
-## 🔄 Service Management
+## 🔹 Service Management
 
 Check status:
 ```bash
 systemctl status heartbeat-checkin.service
-```
-
-Follow logs live:
-```bash
-journalctl -u heartbeat-checkin.service -f
 ```
 
 Restart service:
@@ -64,79 +58,56 @@ Restart service:
 sudo systemctl restart heartbeat-checkin.service
 ```
 
-Stop service:
+Follow logs live:
 ```bash
-sudo systemctl stop heartbeat-checkin.service
+journalctl -u heartbeat-checkin.service -f
 ```
 
-Enable at boot:
+Last API response:
 ```bash
-sudo systemctl enable heartbeat-checkin.service
-```
-
-Disable autostart:
-```bash
-sudo systemctl disable heartbeat-checkin.service
+cat /tmp/dcs_last_response.log
 ```
 
 ---
 
-## ✅ Verification
-
-After ~5 minutes, confirm in NocoDB:
-- **hostname** = device’s hostname
-- **last_seen** = current time in GMT+8
-- **ip** = public IP (detected via `ifconfig.me` / `ipify.org` / `ipinfo.io`)
-
-Manual run (once only, for testing):
-```bash
-bash /opt/heartbeat/client_checkin.sh
-```
-
----
-
-## ❌ Uninstall
-
-To fully remove the client:
+## 🔹 Uninstall
 
 ```bash
-sudo systemctl stop heartbeat-checkin.service
-sudo systemctl disable heartbeat-checkin.service
-sudo rm -f /etc/systemd/system/heartbeat-checkin.service
-sudo rm -rf /opt/heartbeat
-sudo systemctl daemon-reload
+curl -fsSL https://raw.githubusercontent.com/username/<your-repo>/main/uninstall_dcs.sh | bash
 ```
 
----
-
-## 🛠 Future Notes
-
-- If you redeploy and want to **update the script**, edit:
-  ```bash
-  sudo nano /opt/heartbeat/client_checkin.sh
-  sudo systemctl restart heartbeat-checkin.service
-  ```
-- By default, the client runs forever in a loop every 5 minutes.  
-- It is safe to re-run the install script; it will overwrite the client and reset the service.  
-- Logs are always available with:
-  ```bash
-  journalctl -u heartbeat-checkin.service -f
-  ```
+This stops the service, disables it, and removes all installed files.
 
 ---
 
-## 🌐 Architecture Overview
+## 🔹 How It Works
 
-- Each remote device runs this **DCS client** (heartbeat script).  
-- Client posts JSON to NocoDB table:  
-  ```json
-  {
-    "hostname": "my-device",
-    "last_seen": "21-09-2025 14:45",
-    "ip": "123.45.67.89"
-  }
-  ```
-- Netlify dashboard + functions query NocoDB to display:  
-  - Device status (UP/DOWN, based on last_seen age)  
-  - History logs  
-  - Charts (activity, uptime)  
+- Every 5 minutes, the client posts JSON like:
+
+```json
+{
+  "hostname": "<device-hostname>",
+  "last_seen": "20-09-2025 10:45",
+  "ip": "203.0.113.25"
+}
+```
+
+- Time is always **GMT+8 (Asia/Manila)**.
+- Public IP is fetched via multiple fallbacks (ifconfig.me, ipify.org, ipinfo.io, checkip.amazonaws.com, icanhazip.com) and finally the local route if all else fails.
+- Service waits 10s on boot to ensure networking is up.
+
+---
+
+## 🔹 Debugging
+
+- If no rows show up in NocoDB:
+  1. Check `/tmp/dcs_last_response.log` for error messages.  
+  2. Verify `NC_URL` is the correct API endpoint.  
+  3. Test with a one-shot debug run:
+     ```bash
+     bash /opt/heartbeat/client_checkin.sh
+     ```
+
+---
+
+✅ With this, you always know which devices are alive based on their **last_seen** field in NocoDB.
