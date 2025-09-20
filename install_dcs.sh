@@ -48,14 +48,17 @@ while true; do
   PUBIP="\$(get_public_ip)"
 
   echo "[\$(date)] sending check-in: \$DEVICE_HOSTNAME at \$TS (\$PUBIP)"
-  /usr/bin/curl -s -X POST "\$NC_URL" \\
+  RESP=\$(/usr/bin/curl -s -w "%{http_code}" -o /tmp/dcs_last_response.log -X POST "\$NC_URL" \\
     -H "xc-token: \$NC_API_KEY" \\
     -H "Content-Type: application/json" \\
     -d "{
-      \\\"hostname\\\": \\\"\$DEVICE_HOSTNAME\\\",
-      \\\"last_seen\\\": \\\"\$TS\\\",
-      \\\"ip\\\": \\\"\$PUBIP\\\"
-    }" >/tmp/dcs_last_response.log 2>&1
+      \\"hostname\\": \\"\$DEVICE_HOSTNAME\\",
+      \\"last_seen\\": \\"\$TS\\",
+      \\"ip\\": \\"\$PUBIP\\"
+    }")
+
+  echo "➡️ Response code: \$RESP"
+  echo "➡️ Response body:" && cat /tmp/dcs_last_response.log
 
   sleep "\$INTERVAL_SEC"
 done
