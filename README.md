@@ -30,7 +30,7 @@ curl -fsSL https://raw.githubusercontent.com/<your-username>/<your-repo>/main/in
 You will be prompted for:
 - **NocoDB API URL**  
   Example:  
-  `https://nocodb.enkiel.tv/api/v1/db/data/v1/DCS/device_checkins`
+  `https://api-website/api/v1/db/data/v1/DCS/device_checkins`
 - **NocoDB API Key**  
 
 The installer will:
