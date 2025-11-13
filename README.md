@@ -1,11 +1,9 @@
-# 📡 DCS – Device Check-in System (Installer)
+# DCS – Device Check-in System (Installer)
 
 DCS is a lightweight heartbeat client that lets remote devices **check in** to a central NocoDB database every 5 minutes.  
 Instead of pinging devices, you simply check when they last reported.
 
----
-
-## 🔹 Requirements
+## Requirements
 - Linux system with `systemd`
 - `curl` installed
 - NocoDB instance with a table like:
@@ -16,11 +14,9 @@ Instead of pinging devices, you simply check when they last reported.
 | last_seen  | Single Line Text (format: `DD-MM-YYYY HH:mm`) |
 | ip         | Single Line Text |
 
-⚠️ `last_seen` **must be text**, not date/time, to avoid format errors.
+`last_seen` **must be text**, not date/time, to avoid format errors.
 
----
-
-## 🔹 Install
+## Install
 
 Run the installer:
 
@@ -44,9 +40,7 @@ The installer will:
 - Create systemd unit → `/etc/systemd/system/heartbeat-checkin.service`
 - Enable + start service
 
----
-
-## 🔹 Service Management
+## Service Management
 
 Check status:
 ```bash
@@ -68,9 +62,7 @@ Last API response:
 cat /tmp/dcs_last_response.log
 ```
 
----
-
-## 🔹 Uninstall
+## Uninstall
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/username/<your-repo>/main/uninstall_dcs.sh | bash
@@ -78,9 +70,7 @@ curl -fsSL https://raw.githubusercontent.com/username/<your-repo>/main/uninstall
 
 This stops the service, disables it, and removes all installed files.
 
----
-
-## 🔹 How It Works
+## How It Works
 
 - Every 5 minutes, the client posts JSON like:
 
@@ -96,9 +86,7 @@ This stops the service, disables it, and removes all installed files.
 - Public IP is fetched via multiple fallbacks (ifconfig.me, ipify.org, ipinfo.io, checkip.amazonaws.com, icanhazip.com) and finally the local route if all else fails.
 - Service waits 10s on boot to ensure networking is up.
 
----
-
-## 🔹 Debugging
+## Debugging
 
 - If no rows show up in NocoDB:
   1. Check `/tmp/dcs_last_response.log` for error messages.  
@@ -108,6 +96,4 @@ This stops the service, disables it, and removes all installed files.
      bash /opt/heartbeat/client_checkin.sh
      ```
 
----
-
-✅ With this, you always know which devices are alive based on their **last_seen** field in NocoDB.
+With this, you always know which devices are alive based on their **last_seen** field in NocoDB.
