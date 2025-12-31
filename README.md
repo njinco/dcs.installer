@@ -4,9 +4,8 @@ DCS is a lightweight heartbeat client that lets remote devices **check in** to a
 Instead of pinging devices, you simply check when they last reported.
 
 ## Requirements
-- Linux system with `systemd`
-- `curl` installed
-- NocoDB instance with a table like:
+
+NocoDB table schema:
 
 | Column     | Type             |
 |------------|------------------|
@@ -16,7 +15,12 @@ Instead of pinging devices, you simply check when they last reported.
 
 `last_seen` **must be text**, not date/time, to avoid format errors.
 
-## Install
+Platform requirements:
+- Linux: `systemd`, `curl`
+- Docker: Docker Engine + Docker Compose v2
+- Windows: `curl`, PowerShell (preferred) or WMIC (fallback)
+
+## Linux (systemd) Install
 
 Run the installer:
 
@@ -25,22 +29,27 @@ curl -fsSL https://raw.githubusercontent.com/username/<your-repo>/main/install_d
 ```
 
 You will be prompted for:
-
 - **NocoDB API URL**  
   Example:  
   ```
   https://<your-nocodb-domain>/api/v1/db/data/v1/<project>/<table>
   ```
-
 - **NocoDB API Key**
 
-The installer will:
+Non-interactive install:
+```bash
+NC_URL="https://..." NC_API_KEY="..." \
+  curl -fsSL https://raw.githubusercontent.com/username/<your-repo>/main/install_dcs.sh | bash
+```
 
+The installer will:
 - Copy client → `/opt/heartbeat/client_checkin.sh`
+- Create env file → `/etc/heartbeat/heartbeat.env` (root-only)
 - Create systemd unit → `/etc/systemd/system/heartbeat-checkin.service`
+- Create `dcs` system user
 - Enable + start service
 
-## Service Management
+### Service Management
 
 Check status:
 ```bash
@@ -52,23 +61,84 @@ Restart service:
 sudo systemctl restart heartbeat-checkin.service
 ```
 
-Follow logs live:
+Follow logs live (journald):
 ```bash
 journalctl -u heartbeat-checkin.service -f
 ```
 
-Last API response:
+### Configuration
+
+Edit `/etc/heartbeat/heartbeat.env` as root:
+
 ```bash
-cat /tmp/dcs_last_response.log
+NC_URL="https://<your-nocodb-domain>/api/v1/db/data/v1/<project>/<table>"
+NC_API_KEY="your_api_key"
+# Optional overrides
+# DEVICE_ID_OVERRIDE="custom-device-id"
+# INTERVAL_SEC=300
 ```
 
-## Uninstall
+After changes:
+```bash
+sudo systemctl restart heartbeat-checkin.service
+```
+
+### Uninstall
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/username/<your-repo>/main/uninstall_dcs.sh | bash
 ```
 
-This stops the service, disables it, and removes all installed files.
+This stops the service, disables it, and removes installed files. The `dcs` user is left in place.
+
+## Docker
+
+Build and run with Compose:
+```bash
+cat > .env <<'EOF'
+NC_URL=https://<your-nocodb-domain>/api/v1/db/data/v1/<project>/<table>
+NC_API_KEY=your_api_key
+EOF
+
+docker compose up -d --build
+```
+
+Or with `docker run`:
+```bash
+docker build -t dcs-checkin .
+docker run -d --name dcs-checkin --restart unless-stopped \
+  -e NC_URL="https://<your-nocodb-domain>/api/v1/db/data/v1/<project>/<table>" \
+  -e NC_API_KEY="your_api_key" \
+  dcs-checkin:latest
+```
+
+Optional environment variables for Docker:
+- `DEVICE_ID_OVERRIDE`
+- `INTERVAL_SEC`
+
+Logs:
+```bash
+docker logs -f dcs-checkin
+```
+
+## Windows
+
+Edit `client_checkin_windows.bat`:
+```bat
+set "NC_URL=https://<your-nocodb-domain>/api/v1/db/data/v1/<project>/<table>"
+set "NC_API_KEY=<your_api_key>"
+```
+
+Then run the script:
+```bat
+client_checkin_windows.bat
+```
+
+PowerShell is used for GMT+8 time conversion; if PowerShell is unavailable, WMIC is used as a fallback (then local `%date% %time%` if WMIC is missing).
+Last response log:
+```
+%TEMP%\dcs_last_response.log
+```
 
 ## How It Works
 
@@ -84,16 +154,19 @@ This stops the service, disables it, and removes all installed files.
 
 - Time is always **GMT+8 (Asia/Manila)**.
 - Public IP is fetched via multiple fallbacks (ifconfig.me, ipify.org, ipinfo.io, checkip.amazonaws.com, icanhazip.com) and finally the local route if all else fails.
-- Service waits 10s on boot to ensure networking is up.
+- The systemd service waits 10s on boot to ensure networking is up.
 
 ## Debugging
 
 - If no rows show up in NocoDB:
-  1. Check `/tmp/dcs_last_response.log` for error messages.  
-  2. Verify `NC_URL` is the correct API endpoint.  
+  1. Check logs:
+     ```bash
+     journalctl -u heartbeat-checkin.service -f
+     ```
+  2. Verify `NC_URL` is the correct API endpoint.
   3. Test with a one-shot debug run:
      ```bash
-     bash /opt/heartbeat/client_checkin.sh
+     sudo NC_URL="..." NC_API_KEY="..." bash /opt/heartbeat/client_checkin.sh
      ```
 
 With this, you always know which devices are alive based on their **last_seen** field in NocoDB.
