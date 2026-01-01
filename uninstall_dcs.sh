@@ -110,18 +110,4 @@ if id -u "$SERVICE_USER" >/dev/null 2>&1; then
   $SUDO userdel -r "$SERVICE_USER" >/dev/null 2>&1 || true
 fi
 
-# Remove 'rpi' user (dangerous)
-if id -u rpi >/dev/null 2>&1; then
-  if [[ "${SUDO_USER:-$(id -un)}" == "rpi" ]]; then
-    echo "WARNING: Removing user 'rpi' while logged in as rpi may interrupt your session."
-  fi
-  if [[ "$PWD" == "/home/rpi"* ]]; then
-    cd /
-  fi
-  echo "Removing user 'rpi'..."
-  if ! $SUDO userdel -r rpi >/dev/null 2>&1; then
-    echo "WARNING: Failed to remove user 'rpi'. Ensure no active sessions and try again."
-  fi
-fi
-
 echo "✅ DCS uninstall completed."

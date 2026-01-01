@@ -116,8 +116,8 @@ sudo systemctl restart heartbeat-checkin.service
 curl -fsSL https://raw.githubusercontent.com/username/<your-repo>/main/uninstall_dcs.sh | bash
 ```
 
-This stops the systemd service, removes files, stops/removes the Docker container if present, and deletes the `dcs` and `rpi` users.  
-Run uninstall from a different user if you need to keep your current session.
+This stops the systemd service, removes files, stops/removes the Docker container if present, and deletes the `dcs` user.  
+Run uninstall from a different user if you happen to be logged in as `dcs`.
 
 ## Docker
 

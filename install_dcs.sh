@@ -378,6 +378,7 @@ EOF
   $SUDO systemctl enable --now heartbeat-checkin.service
 
   echo "✅ DCS client installed and running (systemd)"
+  echo "👉 User created: $SERVICE_USER (removed on uninstall)"
   echo "👉 Check logs with: journalctl -u heartbeat-checkin.service -f"
 }
 
@@ -434,6 +435,7 @@ install_docker() {
   "${compose_cmd[@]}" -f "$compose_file" --project-directory "$docker_dir" up -d --build
 
   echo "✅ DCS container installed and running (docker)"
+  echo "👉 No system user created for Docker mode"
   echo "👉 Logs: ${docker_cmd[*]} logs -f $DOCKER_CONTAINER"
 }
 
