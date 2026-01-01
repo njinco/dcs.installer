@@ -11,9 +11,17 @@ prompt_value() {
   local prompt="$1"
   local secret="$2"
   local value=""
+  local show_key="${DCS_SHOW_KEY:-}"
+  local show_secret="no"
+
+  if [[ "$secret" == "yes" ]]; then
+    case "$show_key" in
+      1|yes|true|TRUE|Yes|YES) show_secret="yes" ;;
+    esac
+  fi
 
   if [[ -t 0 ]]; then
-    if [[ "$secret" == "yes" ]]; then
+    if [[ "$secret" == "yes" && "$show_secret" != "yes" ]]; then
       read -rsp "$prompt" value
       echo
     else
@@ -24,7 +32,7 @@ prompt_value() {
   fi
 
   if [[ -r /dev/tty ]]; then
-    if [[ "$secret" == "yes" ]]; then
+    if [[ "$secret" == "yes" && "$show_secret" != "yes" ]]; then
       read -rsp "$prompt" value </dev/tty
       echo >/dev/tty
     else

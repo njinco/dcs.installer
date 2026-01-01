@@ -36,6 +36,11 @@ You will be prompted for:
   ```
 - **NocoDB API Key**
 
+By default, API key input is hidden. To show it during install:
+```bash
+DCS_SHOW_KEY=1 curl -fsSL https://raw.githubusercontent.com/username/<your-repo>/main/install_dcs.sh | bash
+```
+
 Non-interactive install:
 ```bash
 NC_URL="https://..." NC_API_KEY="..." \
@@ -48,6 +53,12 @@ The installer will:
 - Create systemd unit → `/etc/systemd/system/heartbeat-checkin.service`
 - Create `dcs` system user
 - Enable + start service
+
+Quick verify:
+1. `systemctl status heartbeat-checkin.service`
+2. `journalctl -u heartbeat-checkin.service -f`
+
+If you need to change the URL/key later, edit `/etc/heartbeat/heartbeat.env` and restart the service.
 
 ### Service Management
 
