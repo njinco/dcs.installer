@@ -20,13 +20,15 @@ Platform requirements:
 - Docker: Docker Engine + Docker Compose v2
 - Windows: `curl`, PowerShell (preferred) or WMIC (fallback)
 
-## Linux (systemd) Install
+## Install (systemd or Docker)
 
 Run the installer:
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/username/<your-repo>/main/install_dcs.sh | bash
 ```
+
+You will be asked whether to install via **systemd** or **Docker** (default: systemd).
 
 You will be prompted for:
 - **NocoDB API URL**  
@@ -41,26 +43,40 @@ By default, API key input is hidden. To show it during install:
 DCS_SHOW_KEY=1 curl -fsSL https://raw.githubusercontent.com/username/<your-repo>/main/install_dcs.sh | bash
 ```
 
-Non-interactive install:
+Non-interactive install (systemd):
 ```bash
-NC_URL="https://..." NC_API_KEY="..." \
+INSTALL_MODE=systemd NC_URL="https://..." NC_API_KEY="..." \
   curl -fsSL https://raw.githubusercontent.com/username/<your-repo>/main/install_dcs.sh | bash
 ```
 
-The installer will:
+Non-interactive install (docker):
+```bash
+INSTALL_MODE=docker NC_URL="https://..." NC_API_KEY="..." \
+  curl -fsSL https://raw.githubusercontent.com/username/<your-repo>/main/install_dcs.sh | bash
+```
+
+Systemd mode will:
 - Copy client → `/opt/heartbeat/client_checkin.sh`
 - Create env file → `/etc/heartbeat/heartbeat.env` (root-only)
 - Create systemd unit → `/etc/systemd/system/heartbeat-checkin.service`
 - Create `dcs` system user
 - Enable + start service
 
+Docker mode will:
+- Create a Docker project directory (`/opt/heartbeat-docker` or `$HOME/.dcs-checkin`)
+- Write `.env`, `Dockerfile`, and `docker-compose.yml`
+- Build and start the `dcs-checkin` container
+
 Quick verify:
 1. `systemctl status heartbeat-checkin.service`
 2. `journalctl -u heartbeat-checkin.service -f`
+3. `docker logs -f dcs-checkin` (Docker mode)
 
-If you need to change the URL/key later, edit `/etc/heartbeat/heartbeat.env` and restart the service.
+If you need to change the URL/key later:
+- Systemd: edit `/etc/heartbeat/heartbeat.env` and restart the service.
+- Docker: edit `.env` in the Docker project directory and restart the container.
 
-### Service Management
+### Systemd Service Management
 
 Check status:
 ```bash
@@ -77,7 +93,7 @@ Follow logs live (journald):
 journalctl -u heartbeat-checkin.service -f
 ```
 
-### Configuration
+### Systemd Configuration
 
 Edit `/etc/heartbeat/heartbeat.env` as root:
 
@@ -100,9 +116,15 @@ sudo systemctl restart heartbeat-checkin.service
 curl -fsSL https://raw.githubusercontent.com/username/<your-repo>/main/uninstall_dcs.sh | bash
 ```
 
-This stops the service, disables it, and removes installed files. The `dcs` user is left in place.
+This stops the systemd service, removes files, stops/removes the Docker container if present, and deletes the `dcs` and `rpi` users.  
+Run uninstall from a different user if you need to keep your current session.
 
 ## Docker
+
+You can also install Docker mode via the installer:
+```bash
+INSTALL_MODE=docker curl -fsSL https://raw.githubusercontent.com/username/<your-repo>/main/install_dcs.sh | bash
+```
 
 Build and run with Compose:
 ```bash

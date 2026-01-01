@@ -2,9 +2,7 @@ services:
   dcs-checkin:
     build: .
     image: dcs-checkin:latest
+    container_name: dcs-checkin
     restart: unless-stopped
-    environment:
-      NC_URL: ${NC_URL}
-      NC_API_KEY: ${NC_API_KEY}
-      DEVICE_ID_OVERRIDE: ${DEVICE_ID_OVERRIDE}
-      INTERVAL_SEC: ${INTERVAL_SEC:-300}
+    env_file:
+      - .env
