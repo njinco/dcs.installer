@@ -39,14 +39,14 @@ if [[ -n "${SUDO_USER:-}" ]]; then
 fi
 docker_dirs+=("$HOME/.dcs-checkin")
 
-# Stop and disable systemd service if it exists
+# Stop and disable systemd service if present or running
 if command -v systemctl >/dev/null 2>&1; then
-  if systemctl list-unit-files | grep -q heartbeat-checkin.service; then
+  if systemctl is-active --quiet heartbeat-checkin.service 2>/dev/null; then
     echo "Stopping DCS service..."
-    $SUDO systemctl stop heartbeat-checkin.service || true
-    echo "Disabling DCS service..."
-    $SUDO systemctl disable heartbeat-checkin.service || true
   fi
+  $SUDO systemctl stop heartbeat-checkin.service >/dev/null 2>&1 || true
+  echo "Disabling DCS service..."
+  $SUDO systemctl disable heartbeat-checkin.service >/dev/null 2>&1 || true
 fi
 
 # Remove service file
@@ -102,6 +102,9 @@ done
 if command -v systemctl >/dev/null 2>&1; then
   echo "Reloading systemd daemon..."
   $SUDO systemctl daemon-reload
+  if systemctl list-units --all --full --no-legend | awk '{print $1}' | grep -qx heartbeat-checkin.service; then
+    $SUDO systemctl reset-failed heartbeat-checkin.service >/dev/null 2>&1 || true
+  fi
 fi
 
 # Remove service user

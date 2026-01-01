@@ -65,6 +65,7 @@ Systemd mode will:
 Docker mode will:
 - Create a Docker project directory (`/opt/heartbeat-docker` or `$HOME/.dcs-checkin`)
 - Write `.env`, `Dockerfile`, and `docker-compose.yml`
+- Prompt for an optional device name override (defaults to host hostname)
 - Build and start the `dcs-checkin` container
 
 Quick verify:
@@ -131,6 +132,7 @@ Build and run with Compose:
 cat > .env <<'EOF'
 NC_URL=https://<your-nocodb-domain>/api/v1/db/data/v1/<project>/<table>
 NC_API_KEY=your_api_key
+DEVICE_ID_OVERRIDE=$(hostname)
 EOF
 
 docker compose up -d --build
@@ -142,6 +144,7 @@ docker build -t dcs-checkin .
 docker run -d --name dcs-checkin --restart unless-stopped \
   -e NC_URL="https://<your-nocodb-domain>/api/v1/db/data/v1/<project>/<table>" \
   -e NC_API_KEY="your_api_key" \
+  -e DEVICE_ID_OVERRIDE="$(hostname)" \
   dcs-checkin:latest
 ```
 

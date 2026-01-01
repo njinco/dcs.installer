@@ -430,6 +430,15 @@ install_docker() {
   write_client_script "$docker_dir/client_checkin.sh" "$file_sudo"
   write_dockerfile "$docker_dir/Dockerfile" "$file_sudo"
   write_docker_compose "$compose_file" "$file_sudo"
+  if [[ -z "${DEVICE_ID_OVERRIDE:-}" ]]; then
+    device_name=""
+    if device_name="$(prompt_value "Optional device name override (leave blank for host name): " "no")"; then
+      DEVICE_ID_OVERRIDE="$device_name"
+    fi
+    if [[ -z "${DEVICE_ID_OVERRIDE:-}" ]]; then
+      DEVICE_ID_OVERRIDE="$(hostname)"
+    fi
+  fi
   write_env_file "$env_file" "yes" "$file_sudo"
 
   "${compose_cmd[@]}" -f "$compose_file" --project-directory "$docker_dir" up -d --build
