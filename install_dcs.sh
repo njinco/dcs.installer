@@ -59,12 +59,75 @@ prompt_value() {
   return 1
 }
 
+is_truthy() {
+  case "${1:-}" in
+    1|true|TRUE|True|yes|YES|y|Y|on|ON) return 0 ;;
+    *) return 1 ;;
+  esac
+}
+
+confirm_or_exit() {
+  local message="$1"
+  local reply=""
+
+  if is_truthy "${DCS_FORCE_INSTALL:-}"; then
+    return 0
+  fi
+
+  if ! reply="$(prompt_value "$message [y/N]: " "no")"; then
+    echo "❌ $message Set DCS_FORCE_INSTALL=1 to override."
+    exit 1
+  fi
+
+  case "$reply" in
+    y|Y|yes|YES) return 0 ;;
+    *) echo "❌ Aborted."; exit 1 ;;
+  esac
+}
+
 require_cmd() {
   local cmd="$1"
   if ! command -v "$cmd" >/dev/null 2>&1; then
     echo "❌ Missing dependency: $cmd"
     exit 1
   fi
+}
+
+detect_systemd_install() {
+  if [[ -f "$SERVICE_FILE" || -f "$ENV_FILE" || -d "$INSTALL_DIR" ]]; then
+    return 0
+  fi
+  if command -v systemctl >/dev/null 2>&1; then
+    if systemctl is-active --quiet heartbeat-checkin.service 2>/dev/null; then
+      return 0
+    fi
+  fi
+  return 1
+}
+
+detect_docker_install() {
+  if [[ -d /opt/heartbeat-docker || -d "$HOME/.dcs-checkin" ]]; then
+    return 0
+  fi
+
+  if [[ -n "${SUDO_USER:-}" ]]; then
+    if command -v getent >/dev/null 2>&1; then
+      sudo_home="$(getent passwd "$SUDO_USER" | cut -d: -f6)"
+      if [[ -n "$sudo_home" && -d "$sudo_home/.dcs-checkin" ]]; then
+        return 0
+      fi
+    elif [[ -d "/home/$SUDO_USER/.dcs-checkin" ]]; then
+      return 0
+    fi
+  fi
+
+  if command -v docker >/dev/null 2>&1; then
+    if docker ps -a --format '{{.Names}}' 2>/dev/null | grep -qx "$DOCKER_CONTAINER"; then
+      return 0
+    fi
+  fi
+
+  return 1
 }
 
 escape_env() {
@@ -464,6 +527,22 @@ elif [[ "$INSTALL_MODE" == "2" || "$INSTALL_MODE" == "docker" ]]; then
 else
   echo "❌ Invalid install mode: $INSTALL_MODE"
   exit 1
+fi
+
+if [[ "$INSTALL_MODE" == "systemd" ]]; then
+  if detect_systemd_install; then
+    confirm_or_exit "Existing systemd install detected. Overwrite?"
+  fi
+  if detect_docker_install; then
+    confirm_or_exit "Existing Docker install detected. Continue with systemd?"
+  fi
+else
+  if detect_docker_install; then
+    confirm_or_exit "Existing Docker install detected. Overwrite?"
+  fi
+  if detect_systemd_install; then
+    confirm_or_exit "Existing systemd install detected. Continue with Docker?"
+  fi
 fi
 
 NC_URL="${NC_URL:-}"

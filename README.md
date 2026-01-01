@@ -30,6 +30,9 @@ curl -fsSL https://raw.githubusercontent.com/username/<your-repo>/main/install_d
 
 You will be asked whether to install via **systemd** or **Docker** (default: systemd).
 
+If an existing install is detected, the installer will prompt before overwriting.  
+For non-interactive runs, set `DCS_FORCE_INSTALL=1` to override.
+
 You will be prompted for:
 - **NocoDB API URL**  
   Example:  
