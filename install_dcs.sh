@@ -7,12 +7,47 @@ echo "=== 📡 DCS - Device Check-in System Installer ==="
 NC_URL="${NC_URL:-}"
 NC_API_KEY="${NC_API_KEY:-}"
 
+prompt_value() {
+  local prompt="$1"
+  local secret="$2"
+  local value=""
+
+  if [[ -t 0 ]]; then
+    if [[ "$secret" == "yes" ]]; then
+      read -rsp "$prompt" value
+      echo
+    else
+      read -rp "$prompt" value
+    fi
+    printf '%s' "$value"
+    return 0
+  fi
+
+  if [[ -r /dev/tty ]]; then
+    if [[ "$secret" == "yes" ]]; then
+      read -rsp "$prompt" value </dev/tty
+      echo >/dev/tty
+    else
+      read -rp "$prompt" value </dev/tty
+    fi
+    printf '%s' "$value"
+    return 0
+  fi
+
+  return 1
+}
+
 if [[ -z "$NC_URL" ]]; then
-  read -rp "Enter your NocoDB API URL: " NC_URL
+  if ! NC_URL="$(prompt_value "Enter your NocoDB API URL: " "no")"; then
+    echo "❌ No TTY available. Set NC_URL and NC_API_KEY in the environment."
+    exit 1
+  fi
 fi
 if [[ -z "$NC_API_KEY" ]]; then
-  read -rsp "Enter your NocoDB API Key: " NC_API_KEY
-  echo
+  if ! NC_API_KEY="$(prompt_value "Enter your NocoDB API Key: " "yes")"; then
+    echo "❌ No TTY available. Set NC_URL and NC_API_KEY in the environment."
+    exit 1
+  fi
 fi
 
 if [[ -z "$NC_URL" || -z "$NC_API_KEY" ]]; then
