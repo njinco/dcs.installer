@@ -23,7 +23,9 @@ if "%PUBIP%"=="" set "PUBIP=unknown"
 
 :: Date/Time in GMT+8 (Asia/Manila)
 set "TS="
+set "TS_SOURCE="
 for /f "delims=" %%i in ('powershell -NoProfile -Command "$tz = [TimeZoneInfo]::FindSystemTimeZoneById(''Singapore Standard Time''); [TimeZoneInfo]::ConvertTime((Get-Date), $tz).ToString(''dd-MM-yyyy HH:mm'')" 2^>nul') do set "TS=%%i"
+if not "%TS%"=="" set "TS_SOURCE=PowerShell"
 if "%TS%"=="" (
   set "ldt="
   where wmic >nul 2>&1 && for /f "tokens=2 delims==" %%i in ('wmic os get localdatetime /value 2^>nul') do set "ldt=%%i"
@@ -34,12 +36,14 @@ if "%TS%"=="" (
     set HH=%ldt:~8,2%
     set MIN=%ldt:~10,2%
     set TS=%DD%-%MM%-%YYYY% %HH%:%MIN%
+    set "TS_SOURCE=WMIC"
   ) else (
     call :format_local_ts
   )
 )
 
 :: Send JSON
+if /I "%TS_SOURCE%"=="LocalParse" echo [fallback] Using local date parser: %TS%
 echo [%date% %time%] Sending check-in: %DEVICE_HOSTNAME% at %TS% (%PUBIP%)
 curl -s -X POST "%NC_URL%" ^
   -H "xc-token: %NC_API_KEY%" ^
@@ -61,6 +65,7 @@ set "DD="
 set "MM="
 set "YYYY="
 set "has_alpha="
+set "TS_SOURCE=LocalParse"
 
 echo !date_str!| findstr /r "[A-Za-z]" >nul && set "has_alpha=1"
 if defined has_alpha (
